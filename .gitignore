@@ -1,0 +1,6 @@
+#cmake
+build
+samples/build
+
+#execute
+samples/bin
