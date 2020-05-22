@@ -13,29 +13,44 @@ set( EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin )
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
+find_package(Threads REQUIRED)
+
 set( THIRD_PARTY_LIBS 
     ${OpenCV_LIBS}
 )
 ############### source and test ######################
 include_directories( ${PROJECT_SOURCE_DIR}/../include )
+
+#readFIFO
 add_executable(readFIFO
 readfifo.cpp 
 )
 target_link_libraries( readFIFO
     ${THIRD_PARTY_LIBS}
-    /home/jc-acc/pipeline_file_queue/lib/libpipe_queue.a
+    /home/jc-acc/pipeline_file_queue/lib/libfifopipe.a
 )
 
+#writeFIFO
 add_executable(writeFIFO
 writefifo.cpp 
 )
 target_link_libraries( writeFIFO
     ${THIRD_PARTY_LIBS}
-    /home/jc-acc/pipeline_file_queue/lib/libpipe_queue.a
+    /home/jc-acc/pipeline_file_queue/lib/libfifopipe.a
 )
 
+#matqueue
+add_executable(matqueue
+queue_test.cpp 
+)
+target_link_libraries( matqueue
+    ${THIRD_PARTY_LIBS}
+    /home/jc-acc/pipeline_file_queue/lib/libqueue.a
+)
+target_link_libraries (matqueue ${CMAKE_THREAD_LIBS_INIT})
+
 ############### compile lib #### ######################
-#add_library( pipe_queue
+#add_library( fifopipe
 #	${PROJECT_SOURCE_DIR}/src/fifofile.cpp
 #)
 

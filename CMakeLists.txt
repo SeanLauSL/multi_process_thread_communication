@@ -26,7 +26,11 @@ include_directories( ${PROJECT_SOURCE_DIR}/include )
 #    ${THIRD_PARTY_LIBS}
 #)
 ############### compile lib #### ######################
-add_library( pipe_queue
+add_library( fifopipe
 	${PROJECT_SOURCE_DIR}/src/fifofile.cpp
+)
+
+add_library( queue
+	${PROJECT_SOURCE_DIR}/src/capThread.cpp
 )
 
