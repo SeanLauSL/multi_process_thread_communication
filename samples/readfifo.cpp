@@ -15,7 +15,7 @@ int main()
 #elif TEST_FRESH_DATA
     fifo.setDataSize(1, 1, sizeof(int));
 #endif
-    
+    int key = 0;
     while(1)
     {
         auto startLoop = std::chrono::high_resolution_clock::now();
@@ -49,7 +49,9 @@ int main()
         std::cout<<"val: "<<buffer_land<<std::endl;
 #endif
         cv::imshow("fifo", frame);
-        cv::waitKey(10);
+        key = cv::waitKey(10);
+        if(key == 'q' || key == 'Q')
+			break;
         //usleep(2*1000*1000);
     }
 

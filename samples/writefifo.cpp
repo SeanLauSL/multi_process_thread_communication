@@ -17,7 +17,8 @@ int main()
     //fifo_line
     FIFOIO fifo_line("/home/jc-acc/pipeline_file_queue/tmp/FIFO_line", FIFOIO::WRITE);
     fifo_line.setDataSize(640, 480, 3*sizeof(unsigned char));
-    */
+*/
+    
 
 #if TEST_IMAGE
     cv::VideoCapture cap(0);
@@ -55,6 +56,7 @@ int main()
 
         //usleep(2*1000*1000);//2s
     }
-
+    if(cap.isOpened())
+        cap.release();
     return 0;
 }
