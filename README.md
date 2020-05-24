@@ -57,6 +57,16 @@ include/fifofile.h
 samples/readfifo.cpp
 samples/writefifo.cpp
 ```
+* Issue
+
+a)、`src/fifofile.cpp` 函数push_back()里的nbytes未检查；
+
+b)、`src/fifofile.cpp` 函数push_back()里write失败后应该关闭管道；
+
+c)、FIFOIO的成员buffer还没有free()。
+
+
+
 
 ### Reference
 [linux下的有名管道文件读写操作](https://blog.csdn.net/tiramisu_L/article/details/80176350)
@@ -105,14 +115,50 @@ samples/queue_test.cpp
 [2、进程同步：共享内存](https://www.cnblogs.com/ducong/p/6590544.html)
 
 ### Code
-
-* Samples 共享内存+读写锁
+####  1）、共享内存+读写锁
 实现整个共享内存的读共享，写独占
+
+* Samples
+
 ```
 include/shm_common.h
 samples/producer.cpp
 samples/consumer.cpp
 ```
-* Samples 共享内存+循环队列
+#### 2）、共享内存+循环队列
 
 共享内存中的缓存数据为循环队列结构，有多个数据元素。没有锁，使用占用标志位进行同步，效果类似互斥锁，一个写者，多个读者，全部互斥，也就是当前元素被占用，无论是写还是读都无法访问，寻找下一个可访问元素；有待改进为单元素的读共享，写独占。
+* Class ShmCirQueue
+```
+src/shmcirqueue.cpp
+include/shmcirqueue.h
+```
+
+* Samples 
+```
+samples/producer_shmcq.cpp
+samples/consumer_shmcq.cpp
+```
+* Issue
+
+a)、共享内存已经存在的情况下，会导致无法创建共享内存；应该参考 [Linux进程间的循环队列内存共享](https://blog.csdn.net/oHanTanYanYing/java/article/details/84988851)进行修正：
+```
+shmdata=new unsigned char*[datanum];//指针数据
+// 共享内存对象映射
+pp = (unsigned int *)p;
+exist=pp+5;//内存存在标志位
+ 
+if (*exist==99)//原先内存没有销毁，先销毁掉再创建
+{
+    printf("原先内存没有销毁，先销毁掉再创建\n");
+    if(-1 == shmctl(shmid, IPC_RMID, NULL))
+    {
+        perror("shmctl failed");
+        exit(4);
+    }
+}
+```
+
+另外：调试时可以通过系统命令ipcs查看共享内存；ipcrm -m id删除共享内存。
+
+b)、当写进程中断后，读进程一直在读重复的缓存区域，待修正。

@@ -28,6 +28,7 @@ int main()
 
     struct shareData *shared_stuff;
     shared_stuff = (struct shareData *)shared_memory;
+    
     pthread_rwlockattr_t rwlockattr;//读写锁进程共享属性
     pthread_rwlockattr_init(&rwlockattr);//初始化读写锁进程共享属性
     pthread_rwlockattr_setpshared(&rwlockattr, PTHREAD_PROCESS_SHARED);//设置读写锁进程共享属性

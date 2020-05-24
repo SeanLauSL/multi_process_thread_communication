@@ -69,6 +69,24 @@ target_link_libraries( shm_consumer
 )
 target_link_libraries (shm_consumer ${CMAKE_THREAD_LIBS_INIT})
 
+#producer_shmcq
+add_executable(producer_shmcq
+producer_shmcq.cpp 
+)
+target_link_libraries( producer_shmcq
+    ${THIRD_PARTY_LIBS}
+    /home/jc-acc/pipeline_file_queue/lib/libshmcq.a
+)
+
+#consumer_shmcq
+add_executable(consumer_shmcq
+consumer_shmcq.cpp 
+)
+target_link_libraries( consumer_shmcq
+    ${THIRD_PARTY_LIBS}
+    /home/jc-acc/pipeline_file_queue/lib/libshmcq.a
+)
+
 ############### compile lib #### ######################
 #add_library( fifopipe
 #	${PROJECT_SOURCE_DIR}/src/fifofile.cpp

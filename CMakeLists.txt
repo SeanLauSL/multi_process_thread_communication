@@ -34,3 +34,6 @@ add_library( queue
 	${PROJECT_SOURCE_DIR}/src/capThread.cpp
 )
 
+add_library( shmcq
+	${PROJECT_SOURCE_DIR}/src/shmcirqueue.cpp
+)
