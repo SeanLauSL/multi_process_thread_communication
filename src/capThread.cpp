@@ -86,7 +86,7 @@ void* producer(void* para)
 				(cq->sz)--;
 			}
 			pthread_mutex_unlock(&(cq->f_mutex));//解锁
-			//usleep(1000 * 2);
+			usleep(1000 * 2);
 		}
 		
 		
@@ -133,6 +133,7 @@ void* CaptureQueue::consumer(void* para)
 	while (1)
 	{
 		frame = this->pop_front();
+		usleep(1000 * 2);//腾空闲给写线程
 
 		cv::imshow("frame", frame);
 		cv::waitKey(1);

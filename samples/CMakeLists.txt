@@ -49,6 +49,26 @@ target_link_libraries( matqueue
 )
 target_link_libraries (matqueue ${CMAKE_THREAD_LIBS_INIT})
 
+#share memory producer
+add_executable(shm_producer
+producer.cpp 
+)
+target_link_libraries( shm_producer
+    ${THIRD_PARTY_LIBS}
+    #/home/jc-acc/pipeline_file_queue/lib/libqueue.a
+)
+target_link_libraries (shm_producer ${CMAKE_THREAD_LIBS_INIT})
+
+#share memory consumer
+add_executable(shm_consumer
+consumer.cpp 
+)
+target_link_libraries( shm_consumer
+    ${THIRD_PARTY_LIBS}
+    #/home/jc-acc/pipeline_file_queue/lib/libqueue.a
+)
+target_link_libraries (shm_consumer ${CMAKE_THREAD_LIBS_INIT})
+
 ############### compile lib #### ######################
 #add_library( fifopipe
 #	${PROJECT_SOURCE_DIR}/src/fifofile.cpp
