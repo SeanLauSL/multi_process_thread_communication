@@ -1,10 +1,13 @@
 #include "shmcirqueue.h"
 #include "opencv2/opencv.hpp"
+#include <chrono>
 
 int main()
 {
     ShmCirQueue shmcq((key_t)1234, ShmCirQueue::WRITE);
     //shmcq.setDataSize(640, 480, 3, sizeof(unsigned char));
+    shmcq.setWrFps(1000);
+
     cv::VideoCapture cap(0);
     if(!cap.isOpened())
     {
@@ -24,15 +27,24 @@ int main()
     int nframe = 0;
     while(1)
     {
-        if(nframe < DATA_NUM)
+        auto startLoop = std::chrono::high_resolution_clock::now();
+
+        if(nframe <= DATA_NUM)
         {
             //nframe++;
-            if(++nframe == DATA_NUM)
+            if(++nframe == DATA_NUM+1)
+            {
                 fprintf(stderr, "shared memory circle queue is Ready.");
+                //shmcq.test();
+            }
         }
         cap >> frame;
         shmcq.push((char*)frame.data);
 
+        auto endLoop = std::chrono::high_resolution_clock::now();
+        auto duration_dis = std::chrono::duration_cast<std::chrono::nanoseconds>(endLoop - startLoop);
+        float oneloop = duration_dis.count() * 1.0e-6;//时间间隔ms
+        std::cout<<"time: "<<oneloop<<std::endl;
     }
     if(cap.isOpened())
         cap.release();

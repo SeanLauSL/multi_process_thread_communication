@@ -14,9 +14,9 @@
 //或者仅使用char*  共享内存为[head + data]模式，以head来进行同步
 struct shareData
 {
-    unsigned int rPtr; //读索引下标
-    unsigned int wPtr; //写索引下标
-    bool busy[DATA_NUM]; //占位标志，读写保护
+    //unsigned int rPtr; //读索引下标
+    //unsigned int wPtr; //写索引下标
+    int status[DATA_NUM]; //占位标志，读写保护
     char data[DATA_NUM][DATA_SZ]; //数据
 };
 
@@ -72,6 +72,9 @@ public:
     */
     char* pop();
 
+
+    void test();
+
 private:
     /*
     移动索引下标
@@ -83,14 +86,26 @@ private:
     int shmid; //共享内存获取返回标志shmid
     void *shared_memory = (void *)0;; //原始共享内存
     int mode; //访问共享内存方式 READ、WRITE
-    //char* buffer = NULL; //元素数据(读取进程缓存)
-    char* buffer = (char*)malloc(this->nbytes);
+    char* buffer = NULL; //元素数据(读取进程缓存)
+    //char* buffer = (char*)malloc(this->nbytes);
+    unsigned int rPtr; //读索引下标
+    unsigned int wPtr; //写索引下标
 
 public:
-     enum Mode
+    //访问共享内存的方式
+    enum Mode
     {
         READ        = 0, //!< value, open the file for reading
         WRITE       = 1, //!< value, open the file for writing
+    };
+
+    //状态共享内存的
+    enum Status
+    {
+        WRITING = 1,
+        READING = 2,
+        RELEASE = 3,     //读取完，等待写入
+        READY = 4,       //写入完成，等待读取
     };
 
     //数据元素尺寸

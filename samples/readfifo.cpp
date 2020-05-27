@@ -48,8 +48,8 @@ int main()
 #elif TEST_FRESH_DATA
         std::cout<<"val: "<<buffer_land<<std::endl;
 #endif
-        cv::imshow("fifo", frame);
-        key = cv::waitKey(10);
+        //cv::imshow("fifo", frame);
+        //key = cv::waitKey(10);
         if(key == 'q' || key == 'Q')
 			break;
         //usleep(2*1000*1000);

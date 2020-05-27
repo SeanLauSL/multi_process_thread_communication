@@ -15,13 +15,15 @@ ShmCirQueue::ShmCirQueue(key_t shmKey, int _mode)
 {
     //创建共享内存并附加到本进程
     prepareSharedMemory(shmKey, _mode);
-    if(this->mode == WRITE)
+    //初始化共享内存值
+    initShmParam();
+    /*if(this->mode == WRITE)
     {
         //初始化共享内存值
         initShmParam();
-    }
+    }*/
     //初始化元素数据(读取进程缓存)
-    buffer = (char*)malloc(this->nbytes);
+    this->buffer = (char*)malloc(this->nbytes);
 }
 
 
@@ -81,13 +83,24 @@ void ShmCirQueue::releaseSharedMemory()
     */
 void ShmCirQueue::initShmParam()
 {
-    this->shm->rPtr = 0;
-    this->shm->wPtr = 0;
-    memset(this->shm->busy, false, DATA_NUM);
+    this->rPtr = 0;
+    /*this->wPtr = 0;
+    memset(this->shm->status, 3, DATA_NUM);
     for(int i = 0; i < DATA_NUM; i++)
-        memset(this->shm->data[i], NULL, DATA_NUM);
+        memset(this->shm->data[i], NULL, nbytes);*/
+    
+    fprintf(stderr, "mode: %d \n", this->mode);
+    if(this->mode == WRITE)
+    {
+        this->wPtr = 0;
+        for(int i = 0; i < DATA_NUM; i++)
+            this->shm->status[i] = RELEASE;
 
-    printf("initialized shared memory \n");
+        printf("initialized shared memory \n");
+    }
+    
+
+    fprintf(stderr, "mode: %d \n", this->mode);
 }
 
 
@@ -128,11 +141,7 @@ void ShmCirQueue::setWrFps(unsigned int fps)
     */
 void ShmCirQueue::movePtr(unsigned int& ptr)
 {
-    ptr++;
-    if(ptr >= DATA_NUM)
-    {
-        ptr = 0;
-    }
+    ptr = (ptr + 1) % DATA_NUM;
 }
 
 
@@ -158,23 +167,19 @@ size_t ShmCirQueue::push(char* buffer)
     }
 
     //忙线检测
-    while(shm->busy[shm->wPtr])
+    while(shm->status[this->wPtr] == WRITING || shm->status[this->wPtr] == READING)
     {
-        /*shm->wPtr++;
-        if(shm->wPtr >= DATA_NUM)
-        {
-            shm->wPtr = 0;
-        }*/
-
-        movePtr(shm->wPtr);
+        fprintf(stderr, "[%s line:%d] movePtr W: %d STATUS:%d.\n", __FILE__, __LINE__, this->wPtr, shm->status[this->wPtr]);
+        //usleep(10*1000);
+        movePtr(this->wPtr);
     }
     //占线写内存
-    shm->busy[shm->wPtr] = true;
-    memcpy(shm->data[shm->wPtr], buffer, this->nbytes);
-    shm->busy[shm->wPtr] = false;
-    movePtr(shm->wPtr);
+    shm->status[this->wPtr] = WRITING;
+    memcpy(shm->data[this->wPtr], buffer, this->nbytes);
+    shm->status[this->wPtr] = READY;
+    movePtr(this->wPtr);
 
-    usleep(1000 * 1000/this->wfps);
+    usleep(1000 * 1000/(this->wfps));
     return this->nbytes;
 }
 
@@ -190,26 +195,38 @@ char* ShmCirQueue::pop()
         fprintf(stderr, "[%s line:%d] size of data is not set.\n", __FILE__, __LINE__);
         throw this->nbytes;
     }
-    //忙线检测
-    while(shm->busy[shm->rPtr])
+    //忙线检测、数据检测
+    while(shm->status[this->rPtr] != READY)
     {
-        movePtr(shm->rPtr);
+        fprintf(stderr, "[%s line:%d] movePtr R: %d STATUS:%d.\n", __FILE__, __LINE__, this->rPtr, shm->status[this->rPtr]);
+        movePtr(this->rPtr);
     }
-    //占线读内存
-    shm->busy[shm->rPtr] = true;
-
+    //占线读、写内存(独占)可改用信号量的互斥
+    shm->status[this->rPtr] = READING;
+#if 0
     //要求写进程要先启动一段时间
-    if(shm->data[shm->rPtr] == NULL)
+    if(shm->data[this->rPtr] == NULL)
     {
         releaseSharedMemory();
         fprintf(stderr, "[%s line:%d] pop data failed\n", __FILE__, __LINE__);
-        shm->busy[shm->rPtr] = false;//释放占线标志，退出读进程
-        throw shm->data[shm->rPtr];
+        shm->status[this->rPtr] = RELEASE;//释放占线标志，退出读进程
+        throw shm->data[this->rPtr];
     }
-    memcpy(this->buffer, shm->data[shm->rPtr], this->nbytes);
-    shm->busy[shm->rPtr] = false;
-    movePtr(shm->rPtr);
+#endif
+    memcpy(this->buffer, shm->data[this->rPtr], this->nbytes);
+
+    //usleep(40*1000);//test
+
+    shm->status[this->rPtr] = RELEASE;
+    movePtr(this->rPtr);
 
     return this->buffer;
 
+}
+
+
+void ShmCirQueue::test()
+{
+    for(int i = 0; i < DATA_NUM; i++)
+        fprintf(stderr, "status %d.",shm->status[i]);
 }

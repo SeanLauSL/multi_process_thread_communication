@@ -11,6 +11,7 @@ int main()
     fprintf(stderr, "[%s line:%d].\n", __FILE__, __LINE__);
     while(1)
     {
+        //shmcq.test();
         auto startLoop = std::chrono::high_resolution_clock::now();
 
         char* buffer = shmcq.pop();
@@ -26,7 +27,7 @@ int main()
         if(key == 'q' || key == 'Q')
 			break;
 
-        usleep(40*1000);
+        usleep(400*1000);
 
     }
     return 0;

@@ -37,8 +37,8 @@ int main()
 				wt = 1;
 		}
 		//usleep(50*1000);//50ms
-		cv::imshow("te", srcImg);
-		key = cv::waitKey(wt);
+		//cv::imshow("te", srcImg);
+		//key = cv::waitKey(wt);
 
 		last = srcImg.clone();
 

@@ -1,6 +1,7 @@
 #include "fifofile.h"
 #include <iostream>
 #include "opencv2/opencv.hpp"
+#include <chrono>
 #include "common.h"
 int main()
 {
@@ -42,6 +43,7 @@ int main()
     char itc[1000];
     while(1)
     {
+        auto startLoop = std::chrono::high_resolution_clock::now();
 #if TEST_IMAGE
         cap >> frame;
         fifo_land.push_back(frame.data);
@@ -54,6 +56,10 @@ int main()
         fifo_land.push_back(itcn);
 #endif
 
+        auto endLoop = std::chrono::high_resolution_clock::now();
+        auto duration_dis = std::chrono::duration_cast<std::chrono::nanoseconds>(endLoop - startLoop);
+        float oneloop = duration_dis.count() * 1.0e-6;//时间间隔ms
+        std::cout<<"time: "<<oneloop<<std::endl;
         //usleep(2*1000*1000);//2s
     }
     if(cap.isOpened())
