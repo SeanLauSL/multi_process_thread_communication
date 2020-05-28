@@ -36,7 +36,7 @@ int main()
 			else
 				wt = 1;
 		}
-		//usleep(50*1000);//50ms
+		usleep(40*1000);//50ms(必须延迟或者显示，否则write、read的耗时都很长)
 		//cv::imshow("te", srcImg);
 		//key = cv::waitKey(wt);
 

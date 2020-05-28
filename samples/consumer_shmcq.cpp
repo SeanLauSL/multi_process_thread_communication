@@ -4,7 +4,7 @@
 
 int main()
 {
-    ShmCirQueue shmcq((key_t)1234, ShmCirQueue::READ);
+    ShmCirQueue shmcq((key_t)1234, ShmCirQueue::READ_ONLY);
     cv::Mat frame(480, 640, CV_8UC3);
 
     int key = 0;
@@ -22,12 +22,12 @@ int main()
         float oneloop = duration_dis.count() * 1.0e-6;//时间间隔ms
         std::cout<<"time: "<<oneloop<<std::endl;
 
-        //cv::imshow("shmcq", frame);
-        //key = cv::waitKey(10);
+        cv::imshow("shmcq", frame);
+        key = cv::waitKey(10);
         if(key == 'q' || key == 'Q')
 			break;
 
-        usleep(400*1000);
+        //usleep(40*1000);
 
     }
     return 0;

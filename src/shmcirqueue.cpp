@@ -41,7 +41,7 @@ void ShmCirQueue::prepareSharedMemory(key_t shmKey, int _mode)
         exit(EXIT_FAILURE);
     }
 
-    /*将共享内存附加到本进程,调用成功时返回一个指向共享内存第一个字节的指针*/
+    /*将共享内存映射到本进程,调用成功时返回一个指向共享内存第一个字节的指针*/
     this->shared_memory = shmat(this->shmid, (void *)0, 0);
     if (this->shared_memory == (void *)-1){
         fprintf(stderr, "shmat failed\n");
@@ -50,6 +50,7 @@ void ShmCirQueue::prepareSharedMemory(key_t shmKey, int _mode)
     printf("Memory attached at %X\n", (long)(this->shared_memory));
 
     this->shm = (struct shareData *)(this->shared_memory);
+
 }
 
 
@@ -79,6 +80,35 @@ void ShmCirQueue::releaseSharedMemory()
 
 
 /*
+    @brief 创建共享内存映射到本进程
+    */
+void ShmCirQueue::loginSharedMemory()
+{
+     /*将共享内存映射到本进程,调用成功时返回一个指向共享内存第一个字节的指针*/
+    this->shared_memory = shmat(this->shmid, (void *)0, 0);
+    if (this->shared_memory == (void *)-1){
+        fprintf(stderr, "shmat failed\n");
+        exit(EXIT_FAILURE);
+    }
+    //printf("Memory attached at %X\n", (long)(this->shared_memory));
+
+    this->shm = (struct shareData *)(this->shared_memory);
+}
+
+/*
+    @brief 解除共享内存与本进程的映射
+    */
+void ShmCirQueue::logoutSharedMemory()
+{
+    if(shmdt(this->shared_memory) == -1) 
+    {
+        fprintf(stderr, "shmdt failed\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+/*
     @brief 初始化共享内存的值
     */
 void ShmCirQueue::initShmParam()
@@ -89,18 +119,15 @@ void ShmCirQueue::initShmParam()
     for(int i = 0; i < DATA_NUM; i++)
         memset(this->shm->data[i], NULL, nbytes);*/
     
-    fprintf(stderr, "mode: %d \n", this->mode);
     if(this->mode == WRITE)
     {
         this->wPtr = 0;
         for(int i = 0; i < DATA_NUM; i++)
-            this->shm->status[i] = RELEASE;
+            this->shm->status[i] = EMPTY;
 
         printf("initialized shared memory \n");
     }
-    
 
-    fprintf(stderr, "mode: %d \n", this->mode);
 }
 
 
@@ -127,14 +154,6 @@ void ShmCirQueue::setDataSize(unsigned int width,
 }
 
 
-/*
-    @brief 设置写入帧率
-    */
-void ShmCirQueue::setWrFps(unsigned int fps)
-{
-    this->wfps = fps;
-}
-
 
 /*
     移动索引下标
@@ -152,6 +171,7 @@ void ShmCirQueue::movePtr(unsigned int& ptr)
     */
 size_t ShmCirQueue::push(char* buffer)
 {
+    ///
     if(buffer == NULL)
     {
         releaseSharedMemory();
@@ -169,9 +189,9 @@ size_t ShmCirQueue::push(char* buffer)
     //忙线检测
     while(shm->status[this->wPtr] == WRITING || shm->status[this->wPtr] == READING)
     {
-        fprintf(stderr, "[%s line:%d] movePtr W: %d STATUS:%d.\n", __FILE__, __LINE__, this->wPtr, shm->status[this->wPtr]);
-        //usleep(10*1000);
+        //fprintf(stderr, "[%s line:%d] movePtr W: %d STATUS:%d.\n", __FILE__, __LINE__, this->wPtr, shm->status[this->wPtr]);
         movePtr(this->wPtr);
+        usleep(2);
     }
     //占线写内存
     shm->status[this->wPtr] = WRITING;
@@ -179,7 +199,9 @@ size_t ShmCirQueue::push(char* buffer)
     shm->status[this->wPtr] = READY;
     movePtr(this->wPtr);
 
-    usleep(1000 * 1000/(this->wfps));
+    //usleep(1000 * 1000/(this->wfps));
+    usleep(1000 * 1);
+
     return this->nbytes;
 }
 
@@ -196,26 +218,36 @@ char* ShmCirQueue::pop()
         throw this->nbytes;
     }
     //忙线检测、数据检测
-    while(shm->status[this->rPtr] != READY)
+    switch(this->mode)
     {
-        fprintf(stderr, "[%s line:%d] movePtr R: %d STATUS:%d.\n", __FILE__, __LINE__, this->rPtr, shm->status[this->rPtr]);
-        movePtr(this->rPtr);
+    case READ_DESTROY:
+        while(shm->status[this->rPtr] != READY)
+        {
+            //fprintf(stderr, "[%s line:%d] movePtr R: %d STATUS:%d.\n", __FILE__, __LINE__, this->rPtr, shm->status[this->rPtr]);
+            movePtr(this->rPtr);
+            usleep(2);
+        }
+        break;
+
+    case READ_ONLY:
+        while(shm->status[this->rPtr] != READY && shm->status[this->rPtr] != RELEASE)
+        {
+            //fprintf(stderr, "[%s line:%d] movePtr R: %d STATUS:%d.\n", __FILE__, __LINE__, this->rPtr, shm->status[this->rPtr]);
+            movePtr(this->rPtr);
+            usleep(2);
+        }
+        break;
+
+    default:
+    
+        break;
+
     }
+    
     //占线读、写内存(独占)可改用信号量的互斥
     shm->status[this->rPtr] = READING;
-#if 0
-    //要求写进程要先启动一段时间
-    if(shm->data[this->rPtr] == NULL)
-    {
-        releaseSharedMemory();
-        fprintf(stderr, "[%s line:%d] pop data failed\n", __FILE__, __LINE__);
-        shm->status[this->rPtr] = RELEASE;//释放占线标志，退出读进程
-        throw shm->data[this->rPtr];
-    }
-#endif
-    memcpy(this->buffer, shm->data[this->rPtr], this->nbytes);
 
-    //usleep(40*1000);//test
+    memcpy(this->buffer, shm->data[this->rPtr], this->nbytes);
 
     shm->status[this->rPtr] = RELEASE;
     movePtr(this->rPtr);

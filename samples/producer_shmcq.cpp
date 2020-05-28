@@ -4,9 +4,11 @@
 
 int main()
 {
+    int width = 640;
+    int height = 480;
+    int nchannel = 3;
     ShmCirQueue shmcq((key_t)1234, ShmCirQueue::WRITE);
-    //shmcq.setDataSize(640, 480, 3, sizeof(unsigned char));
-    shmcq.setWrFps(1000);
+    shmcq.setDataSize(width, height, nchannel, sizeof(unsigned char));
 
     cv::VideoCapture cap(0);
     if(!cap.isOpened())
@@ -14,9 +16,9 @@ int main()
         std::cout<<"Failed to open camera."<<std::endl;
         return -1;
     }
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
-
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, width);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, height);
+    //cap.set(cv::CAP_PROP_FPS, 30);//一般usb相机帧率，调大无法获取图像
     cv::Mat frame;
     cap >> frame;
     if(NULL == frame.data)
@@ -34,17 +36,20 @@ int main()
             //nframe++;
             if(++nframe == DATA_NUM+1)
             {
-                fprintf(stderr, "shared memory circle queue is Ready.");
+                fprintf(stderr, "shared memory circle queue is Ready.\n");
                 //shmcq.test();
             }
         }
         cap >> frame;
+        //auto startLoop = std::chrono::high_resolution_clock::now();
         shmcq.push((char*)frame.data);
 
         auto endLoop = std::chrono::high_resolution_clock::now();
         auto duration_dis = std::chrono::duration_cast<std::chrono::nanoseconds>(endLoop - startLoop);
         float oneloop = duration_dis.count() * 1.0e-6;//时间间隔ms
         std::cout<<"time: "<<oneloop<<std::endl;
+        usleep(1000 * 10);
+
     }
     if(cap.isOpened())
         cap.release();
