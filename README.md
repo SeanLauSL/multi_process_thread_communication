@@ -19,21 +19,30 @@ PIPE_BUF也是4kb
 
 分析一下：现在的情况是有两个子进程在对管道进行阻塞写入各68k，即每个子进程完全写入68k才返回，而父进程对管道进行阻塞读取，每次读取4k，打印每4k中的最后一个字符，如果没有数据到达就阻塞等待，如果管道剩余数据不足4k，read 很可能返回 < 4k，但因为我们写入68k是4k整数倍，故不存在这种情况。需要注意的是是边写边读，因为前面说过管道的容量只有64k，当管道被写满时子进程就阻塞等待父进程读取后再写入。由上面输出可以看出B进程先写入64k的B，然后A进程写入68k的A之后B进程接着写完最后4K的B，然后write返回。由A进程write完毕输出的提示可知此时A进程已经写完成了，但父进程还没读取A完毕，当两个子进程全部写完退出时关闭写端文件描述符，则父进程read就会返回0，退出while循环。可以得出结论：当多个进程对管道进行写入，且一次性写入数据量大于PIPE_BUF时，则不能保证写入的原子性，即可能数据是穿插着的。man 手册的解释如下：
 
-       O_NONBLOCK disabled, n > PIPE_BUFThe write is nonatomic: the data given to write(2) may be interleaved with write(2)s by other process;  the write(2) blocks until n bytes have been written.
+       O_NONBLOCK disabled, n > PIPE_BUFThe write is nonatomic: 
+       the data given to write(2) may be interleaved with write(2)s by other process;  
+       the write(2) blocks until n bytes have been written.
 
 注意我们这里设定了size=68k，则写端不能设置成非阻塞，因为Pipe Capacity 只有64k，不能一次性写入68k，如果此时管道是满的（64k)，则只能返回-1并置错误码为EAGAIN，且一个字符也不写入，若不是满的，则写入的字节数是不确定的，需要检查write的返回值，而且这些字节很可能也与其他进程写入的数据穿插着。读端也不能设置为非阻塞，如果此时尚未有数据写入（管道为空）则返回-1并置错误码为EAGAIN，如果有部分数据已经写入，则读取的数据字节数也是不确定的，需要检查read的返回值。总之测试4种不同情形下的情况也应设置不同的条件。
 
     O_NONBLOCK disabled, n <= PIPE_BUF
-        All n bytes are written atomically; write(2) may block if there is not room for n bytes to be written immediately
+        All n bytes are written atomically; 
+        write(2) may block if there is not room for n bytes to be written immediately
 
     O_NONBLOCK enabled, n <= PIPE_BUF
-        If  there  is  room  to write n bytes to the pipe, then write(2) succeeds immediately, writing all n bytes;otherwise write(2) fails, with errno set to EAGAIN.
+        If  there  is  room  to write n bytes to the pipe, then write(2) succeeds immediately, writing all n bytes;
+        otherwise write(2) fails, with errno set to EAGAIN.
 
     O_NONBLOCK disabled, n > PIPE_BUF
-        The write is nonatomic: the data given to write(2) may be interleaved with write(2)s by other process;  thewrite(2) blocks until n bytes have been written.
+        The write is nonatomic: 
+        the data given to write(2) may be interleaved with write(2)s by other process;  
+        thewrite(2) blocks until n bytes have been written.
 
     O_NONBLOCK enabled, n > PIPE_BUF
-        If  the  pipe  is full, then write(2)fails, with errno set to EAGAIN.  Otherwise, from 1 to n bytes may be written (i.e., a "partial write" may occur; the caller should check the return value from write(2)  to  seehow many bytes were actually written), and these bytes may be interleaved with writes by other processes.
+        If  the  pipe  is full, then write(2)fails, with errno set to EAGAIN.  
+        Otherwise, from 1 to n bytes may be written (i.e., a "partial write" may occur; 
+        the caller should check the return value from write(2) to seehow many bytes were actually written), 
+        and these bytes may be interleaved with writes by other processes.
 
 ### 2. 传输cv::Mat
 
@@ -86,7 +95,7 @@ c)、FIFOIO的成员buffer还没有free()。
 
 ### 使用场景
 
-        数据生产速度不可忽略，如嵌入式平台的生产图像和处理图像：图像压入队列，队列过长时，主动清除队列旧数据，保证获取图像较新。如果使用单一共享变量，数据消费线程可能会读取到重复数据，使用队列好一点，虽然队列数据会有一点延迟，比不上使用单一共享变量，但一旦单一共享变量重复，且数据处理过程较长，那么这一重复帧造成的延迟更高。
+数据生产速度不可忽略，如嵌入式平台的生产图像和处理图像：图像压入队列，队列过长时，主动清除队列旧数据，保证获取图像较新。如果使用单一共享变量，数据消费线程可能会读取到重复数据，使用队列好一点，虽然队列数据会有一点延迟，比不上使用单一共享变量，但一旦单一共享变量重复，且数据处理过程较长，那么这一重复帧造成的延迟更高。
 ### Code
 
 * Class CaptureQueue
@@ -101,8 +110,22 @@ include/capThread.h
 samples/queue_test.cpp
 ```
 
+### 泛式模板类deque
+* Class TQueueConcurrent
+
+```
+include/deque.hpp
+```
+
+* Samples
+```
+samples/deque_tempate_test.cpp
+```
+
 ### Reference
 [linux线程与进程同步锁机制](https://blog.csdn.net/zhuoyue01/article/details/105984882/)
+
+[C++多线程，多线程通信，队列](https://blog.csdn.net/m0_37542524/article/details/93642813)
 
 ## 三、共享内存
 
