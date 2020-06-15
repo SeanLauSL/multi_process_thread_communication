@@ -7,7 +7,11 @@ ShmCirQueue::ShmCirQueue()
 
 ShmCirQueue::~ShmCirQueue()
 {
-    free(this->buffer);
+    if(this->buffer != NULL)
+    {
+        free(this->buffer);
+        this->buffer=NULL;
+    }
     releaseSharedMemory();
 }
 
@@ -33,6 +37,10 @@ ShmCirQueue::ShmCirQueue(key_t shmKey, int _mode)
     */
 void ShmCirQueue::prepareSharedMemory(key_t shmKey, int _mode)
 {
+    if (_mode > WRITE){
+        fprintf(stderr, "mode selected is not exist\n");
+        exit(EXIT_FAILURE);
+    }
     this->mode = _mode;
      /*IPC_CREAT表示在key标识的共享内存不存在时，创建共享内存*/
     this->shmid = shmget(shmKey, sizeof(struct shareData), 0666 | IPC_CREAT);

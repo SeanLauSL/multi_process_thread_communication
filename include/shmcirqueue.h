@@ -64,7 +64,7 @@ public:
     ShmCirQueue();
     ~ShmCirQueue();
 
-    ShmCirQueue(key_t shmKey, int _mode);
+    ShmCirQueue(key_t shmKey, int _mode = 0);
 
 public:
     /*
@@ -82,7 +82,7 @@ public:
     @brief 创建共享内存并附加到本进程
     @param shmKey 共享内存标志键值
     */
-    void prepareSharedMemory(key_t shmKey, int _mode);
+    void prepareSharedMemory(key_t shmKey, int _mode = 0);
 
     /*
     @brief 释放共享内存
